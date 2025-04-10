@@ -1,6 +1,8 @@
 # 📦 Project: HTTP Caching with Spring Boot
 
-This project demonstrates how to implement **HTTP caching mechanisms** like **ETag** and **Last-Modified** using **Spring Boot** controllers.
+This project demonstrates how to implement **HTTP caching mechanisms** like **ETag** and **Last-Modified** using **Spring Boot** controllers.  
+
+👉 **Check the blog post for more information:** //TODO
 
 ---
 
@@ -27,11 +29,3 @@ This project demonstrates how to implement **HTTP caching mechanisms** like **ET
 
 - **CountryControllerTest**  
   Tests the `CountryController` for correct **Cache-Control** headers and HTTP 200 responses.
-
----
-
-## Blog
-
-Check the blog post for more information: //TODO
-
----
