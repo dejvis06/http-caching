@@ -35,7 +35,20 @@ public class BlogPostController {
     }
 
     @PutMapping("/{id}/edit")
-    public ResponseEntity<Void> updateBlogPost(@PathVariable Long id, @RequestBody BlogPost updated) {
+    public ResponseEntity<Void> updateBlogPost(
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+            @PathVariable Long id,
+            @RequestBody BlogPost updated) {
+
+        // Generate the current ETag based on existing content
+        String currentETag = "\"" + Utils.sha256Hex(blogPost.getTitle() + blogPost.getContent()) + "\"";
+
+        // If client sends If-Match, check it against current ETag
+        if (ifMatch != null && !ifMatch.equals(currentETag)) {
+            // Mid-air collision detected -> reject with 412 Precondition Failed
+            return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).build();
+        }
+
         blogPost = new BlogPost(
                 id,
                 updated.getTitle(),

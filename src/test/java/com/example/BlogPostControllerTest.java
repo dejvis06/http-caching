@@ -63,20 +63,21 @@ class BlogPostControllerTest {
     }
 
     @Test
-    void shouldReturn304AfterUpdatingBlogPost() throws Exception {
-        // Step 1: GET the blog post
-        mockMvc.perform(get(API + "/1"))
+    void shouldReturnPreconditionFailedWhenUpdatingBlogPostWithOldETag() throws Exception {
+        // Step 1: GET the blog post to retrieve the initial ETag
+        MvcResult getResult = mockMvc.perform(get(API + "/1"))
                 .andExpect(header().exists(HttpHeaders.ETAG))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // Step 2: PUT (update) the blog post (simulate content change)
+        String initialETag = getResult.getResponse().getHeader(HttpHeaders.ETAG);
+
+        // Step 2: PUT (update) the blog post normally (simulate content change)
         BlogPostController.BlogPost updatedBlogPost = new BlogPostController.BlogPost(
                 1L,
                 "My First BlogPost",
-                "This is the content."
+                "Updated blog post content"
         );
-        updatedBlogPost.setContent("Updated blog post content");
 
         MvcResult putResult = mockMvc.perform(put(API + "/1/edit")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -87,9 +88,18 @@ class BlogPostControllerTest {
 
         String newETag = putResult.getResponse().getHeader(HttpHeaders.ETAG);
 
-        // Step 4: Fetch again using the NEW ETag
-        mockMvc.perform(get(API + "/1")
-                        .header(HttpHeaders.IF_NONE_MATCH, newETag))
-                .andExpect(status().isNotModified());
+        // Step 3: Attempt to update again using the OLD ETag (stale version)
+        BlogPostController.BlogPost conflictingUpdate = new BlogPostController.BlogPost(
+                1L,
+                "Conflicting Update",
+                "Trying to save with an old ETag"
+        );
+
+        mockMvc.perform(put(API + "/1/edit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.IF_MATCH, initialETag) // stale ETag
+                        .content(objectMapper.writeValueAsString(conflictingUpdate)))
+                .andExpect(status().isPreconditionFailed()); // Expect 412
     }
+
 }

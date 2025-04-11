@@ -68,36 +68,38 @@ class ArticleControllerTest {
     }
 
     @Test
-    void shouldReturn304AfterUpdatingArticle() throws Exception {
-        // Step 1: Get the article (store Last-Modified)
+    void shouldReturnPreconditionFailedWhenUpdatingArticleWithOldLastModified() throws Exception {
+        // Step 1: Get the article (store initial Last-Modified)
         MvcResult getResult = mockMvc.perform(get(API + "/1"))
                 .andExpect(status().isOk())
                 .andExpect(header().exists(HttpHeaders.LAST_MODIFIED))
                 .andReturn();
-        String lastModified = getResult.getResponse().getHeader(HttpHeaders.LAST_MODIFIED);
+        String initialLastModified = getResult.getResponse().getHeader(HttpHeaders.LAST_MODIFIED);
 
-        // Step 2: Update the article
+        // Step 2: Simulate another user updating the article (no If-Unmodified-Since header)
         ArticleController.Article updatedArticle = new ArticleController.Article(
                 1L,
                 "My First Article (Updated)",
                 "Updated content here",
                 Instant.now()
         );
-        mockMvc.perform(put(API + "/1/edit")
+        mockMvc.perform(put(API + "/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updatedArticle)))
                 .andExpect(status().isOk());
 
-        // Step 3: Get the new Last-Modified from response
-        MvcResult updatedGetResult = mockMvc.perform(get(API + "/1")
-                        .header(HttpHeaders.IF_MODIFIED_SINCE, lastModified))
-                .andExpect(status().isOk())
-                .andReturn();
-        String newLastModified = updatedGetResult.getResponse().getHeader(HttpHeaders.LAST_MODIFIED);
-
-        // Step 4: Fetch again using the NEW Last-Modified -> should return 304 Not Modified
-        mockMvc.perform(get(API + "/1")
-                        .header(HttpHeaders.IF_MODIFIED_SINCE, newLastModified))
-                .andExpect(status().isNotModified());
+        // Step 3: Try to update the article again using the OLD Last-Modified timestamp
+        ArticleController.Article conflictingUpdate = new ArticleController.Article(
+                1L,
+                "Conflicting Update",
+                "Another update with old timestamp",
+                Instant.now()
+        );
+        mockMvc.perform(put(API + "/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(HttpHeaders.IF_UNMODIFIED_SINCE, initialLastModified)
+                        .content(objectMapper.writeValueAsString(conflictingUpdate)))
+                .andExpect(status().isPreconditionFailed()); // Expect 412
     }
+
 }

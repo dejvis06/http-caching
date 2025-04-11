@@ -39,11 +39,28 @@ public class ArticleController {
                 .body(article);
     }
 
-    @PutMapping("/{id}/edit")
-    public ResponseEntity<Void> updateArticle(@PathVariable Long id, @RequestBody Article updated) {
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> updateBlogPost(
+            @RequestHeader(value = "If-Unmodified-Since", required = false) String ifUnmodifiedSince,
+            @PathVariable Long id,
+            @RequestBody Article updated) {
+
+        Instant currentLastModified = article.getLastModified();
+
+        if (ifUnmodifiedSince != null) {
+            Instant clientTime = Utils.parseRFC1123ToInstant(ifUnmodifiedSince);
+            if (currentLastModified.isAfter(clientTime)) {
+                // Mid-air collision detected
+                return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).build();
+            }
+        }
+
+        // Update allowed
         article.setContent(updated.getContent());
-        article.setLastModified(Instant.now()); // Update the last modified time
-        return ResponseEntity.ok().build();
+        article.setLastModified(Instant.now()); // Refresh lastModified time
+        return ResponseEntity.ok()
+                .lastModified(article.getLastModified().toEpochMilli())
+                .build();
     }
 
     public static class Article {
