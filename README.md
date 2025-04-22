@@ -2,7 +2,7 @@
 
 This project demonstrates how to implement **HTTP caching mechanisms** like **ETag** and **Last-Modified** using **Spring Boot** controllers.  
 
-👉 **Check the blog post for more information:** //TODO
+👉 **Check the blog post for more information:** [Spring HTTP Caching](https://dev.to/dejvis_beqiraj/spring-http-caching-5320)
 
 ---
 
